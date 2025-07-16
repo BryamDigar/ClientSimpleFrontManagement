@@ -37,7 +37,6 @@ export interface ApiResponse<T> {
   message: string;
   data: T;
   total?: number;
-  termino?: string;
 }
 
 export const OCUPACIONES = ['Empleado', 'Independiente', 'Pensionado'] as const;

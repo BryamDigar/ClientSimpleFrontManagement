@@ -11,18 +11,29 @@ import { Cliente, ClienteCreateDTO, ClienteUpdateDTO, OCUPACIONES, CIUDADES } fr
   styleUrl: './client.component.css'
 })
 export class ClientComponent implements OnInit {
+  // ========== PROPIEDADES ==========
+  
+  // Formulario y datos
   clienteForm: FormGroup;
   clientes: Cliente[] = [];
   ciudadesFiltradas: string[] = [];
-  ocupaciones = OCUPACIONES;
-  ciudades = CIUDADES;
+  
+  // Constantes
+  readonly ocupaciones = OCUPACIONES;
+  readonly ciudades = CIUDADES;
+  
+  // Estado del componente
   modoEdicion = false;
   clienteEditando: string | null = null;
   mensaje = '';
   cargando = false;
-  terminoBusqueda = '';
-  documentoBusqueda = '';
+  
+  // Búsqueda
+  tipoBusqueda = 'nombre'; // 'nombre' o 'documento'
+  valorBusqueda = '';
 
+  // ========== CONSTRUCTOR E INICIALIZACIÓN ==========
+  
   constructor(
     private fb: FormBuilder,
     private clienteService: ClienteService
@@ -30,25 +41,52 @@ export class ClientComponent implements OnInit {
     this.clienteForm = this.crearFormulario();
   }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.cargarClientes();
     this.ciudadesFiltradas = [...this.ciudades];
   }
 
-  crearFormulario(): FormGroup {
+  // ========== CONFIGURACIÓN DEL FORMULARIO ==========
+  
+  private crearFormulario(): FormGroup {
     return this.fb.group({
-      numeroDocumento: ['', [Validators.required, Validators.maxLength(20), Validators.pattern('^[0-9A-Za-z-]+$')]],
-      nombre: ['', [Validators.required, Validators.maxLength(100), Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$')]],
-      apellidos: ['', [Validators.required, Validators.maxLength(150), Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$')]],
-      fechaNacimiento: ['', [Validators.required]],
+      numeroDocumento: ['', [
+        Validators.required, 
+        Validators.maxLength(20), 
+        Validators.pattern('^[0-9A-Za-z-]+$')
+      ]],
+      nombre: ['', [
+        Validators.required, 
+        Validators.maxLength(100), 
+        Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$')
+      ]],
+      apellidos: ['', [
+        Validators.required, 
+        Validators.maxLength(150), 
+        Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$')
+      ]],
+      fechaNacimiento: ['', [
+        Validators.required, 
+        this.validarFechaNacimiento
+      ]],
       ciudad: ['', [Validators.required, Validators.maxLength(100)]],
-      correoElectronico: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
-      telefono: ['', [Validators.required, Validators.maxLength(20), Validators.pattern('^[+]?[0-9\\s-()]+$')]],
+      correoElectronico: ['', [
+        Validators.required, 
+        Validators.email, 
+        Validators.maxLength(255)
+      ]],
+      telefono: ['', [
+        Validators.required, 
+        Validators.maxLength(20), 
+        Validators.pattern('^[+]?[0-9\\s-()]+$')
+      ]],
       ocupacion: ['', [Validators.required]]
     });
   }
 
-  cargarClientes() {
+  // ========== OPERACIONES CRUD ==========
+  
+  cargarClientes(): void {
     this.cargando = true;
     this.clienteService.obtenerTodosLosClientes().subscribe({
       next: (response) => {
@@ -64,7 +102,7 @@ export class ClientComponent implements OnInit {
     });
   }
 
-  onSubmit() {
+  onSubmit(): void {
     if (this.clienteForm.valid) {
       this.cargando = true;
       
@@ -78,7 +116,7 @@ export class ClientComponent implements OnInit {
     }
   }
 
-  crearCliente() {
+  private crearCliente(): void {
     const clienteData: ClienteCreateDTO = this.clienteForm.value;
     
     this.clienteService.crearCliente(clienteData).subscribe({
@@ -90,13 +128,13 @@ export class ClientComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al crear cliente:', error);
-        this.mostrarMensaje(error.error?.message || 'Error al crear cliente', 'error');
+        this.mostrarMensaje(this.procesarError(error), 'error');
         this.cargando = false;
       }
     });
   }
 
-  actualizarCliente() {
+  private actualizarCliente(): void {
     if (!this.clienteEditando) return;
     
     const clienteData: ClienteUpdateDTO = {
@@ -118,13 +156,13 @@ export class ClientComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al actualizar cliente:', error);
-        this.mostrarMensaje(error.error?.message || 'Error al actualizar cliente', 'error');
+        this.mostrarMensaje(this.procesarError(error), 'error');
         this.cargando = false;
       }
     });
   }
 
-  editarCliente(cliente: Cliente) {
+  editarCliente(cliente: Cliente): void {
     this.modoEdicion = true;
     this.clienteEditando = cliente.numeroDocumento;
     
@@ -139,110 +177,167 @@ export class ClientComponent implements OnInit {
       ocupacion: cliente.ocupacion
     });
     
-    // Deshabilitar el campo número de documento en modo edición
     this.clienteForm.get('numeroDocumento')?.disable();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.mostrarMensaje(`Editando cliente: ${cliente.nombre} ${cliente.apellidos}`, 'success');
   }
 
-  eliminarCliente(numeroDocumento: string) {
-    if (confirm('¿Está seguro de que desea eliminar este cliente?')) {
-      this.cargando = true;
-      
-      this.clienteService.eliminarCliente(numeroDocumento).subscribe({
-        next: (response) => {
-          this.mostrarMensaje(response.message, 'success');
-          this.cargarClientes();
-          this.cargando = false;
-        },
-        error: (error) => {
-          console.error('Error al eliminar cliente:', error);
-          this.mostrarMensaje(error.error?.message || 'Error al eliminar cliente', 'error');
-          this.cargando = false;
-        }
-      });
+  eliminarCliente(numeroDocumento: string): void {
+    if (!confirm('¿Está seguro de que desea eliminar este cliente?')) return;
+    
+    this.cargando = true;
+    this.clienteService.eliminarCliente(numeroDocumento).subscribe({
+      next: (response) => {
+        this.mostrarMensaje(response.message, 'success');
+        this.cargarClientes();
+        this.cargando = false;
+      },
+      error: (error) => {
+        console.error('Error al eliminar cliente:', error);
+        this.mostrarMensaje(error.error?.message || 'Error al eliminar cliente', 'error');
+        this.cargando = false;
+      }
+    });
+  }
+
+  // ========== FUNCIONES DE BÚSQUEDA ==========
+  
+  buscar(): void {
+    if (!this.valorBusqueda.trim()) {
+      this.cargarClientes();
+      return;
+    }
+
+    if (this.tipoBusqueda === 'nombre') {
+      this.buscarPorNombre();
+    } else {
+      this.buscarPorDocumentoUnificado();
     }
   }
 
-  buscarClientes() {
-    if (this.terminoBusqueda.trim()) {
-      this.cargando = true;
-      
-      this.clienteService.buscarClientes(this.terminoBusqueda).subscribe({
+  private buscarPorNombre(): void {
+    this.cargando = true;
+    this.clienteService.buscarClientes(this.valorBusqueda)
+      .subscribe({
         next: (response) => {
           this.clientes = response.data;
           this.mostrarMensaje(`Se encontraron ${response.total} resultados`, 'success');
           this.cargando = false;
         },
         error: (error) => {
-          console.error('Error al buscar clientes:', error);
-          this.mostrarMensaje('Error al buscar clientes', 'error');
+          this.mostrarMensaje(this.procesarError(error), 'error');
           this.cargando = false;
         }
       });
-    } else {
-      this.cargarClientes();
-    }
   }
 
-  buscarPorDocumento() {
-    if (this.documentoBusqueda.trim()) {
-      this.cargando = true;
-      
-      this.clienteService.obtenerClientePorDocumento(this.documentoBusqueda).subscribe({
+  private buscarPorDocumentoUnificado(): void {
+    this.cargando = true;
+    this.clienteService.obtenerClientePorDocumento(this.valorBusqueda)
+      .subscribe({
         next: (response) => {
-          this.clientes = [response.data]; // Mostrar solo el cliente encontrado
+          this.clientes = [response.data];
           this.mostrarMensaje('Cliente encontrado exitosamente', 'success');
           this.cargando = false;
         },
         error: (error) => {
-          console.error('Error al buscar cliente por documento:', error);
-          this.clientes = []; // Limpiar la lista si no se encuentra
-          this.mostrarMensaje(error.error?.message || 'Cliente no encontrado', 'error');
+          this.clientes = [];
+          this.mostrarMensaje(this.procesarError(error), 'error');
           this.cargando = false;
         }
       });
-    } else {
-      this.cargarClientes();
-    }
   }
 
-  filtrarCiudades(event: any) {
+  limpiarBusqueda(): void {
+    this.valorBusqueda = '';
+    this.cargarClientes();
+  }
+
+  // ========== UTILIDADES DEL FORMULARIO ==========
+  
+  filtrarCiudades(event: any): void {
     const valor = event.target.value.toLowerCase();
     this.ciudadesFiltradas = this.ciudades.filter(ciudad => 
       ciudad.toLowerCase().includes(valor)
     );
   }
 
-  seleccionarCiudad(ciudad: string) {
-    this.clienteForm.patchValue({ ciudad });
-    this.ciudadesFiltradas = [...this.ciudades];
-  }
-
-  cancelarEdicion() {
+  cancelarEdicion(): void {
     this.modoEdicion = false;
     this.clienteEditando = null;
     this.limpiarFormulario();
   }
 
-  limpiarFormulario() {
+  limpiarFormulario(): void {
     this.clienteForm.reset();
     this.clienteForm.get('numeroDocumento')?.enable();
     this.ciudadesFiltradas = [...this.ciudades];
   }
 
-  marcarCamposComoTocados() {
+  private marcarCamposComoTocados(): void {
     Object.keys(this.clienteForm.controls).forEach(key => {
       this.clienteForm.get(key)?.markAsTouched();
     });
   }
 
-  mostrarMensaje(texto: string, tipo: 'success' | 'error') {
+  // ========== MANEJO DE MENSAJES Y ERRORES ==========
+  
+  private mostrarMensaje(texto: string, tipo: 'success' | 'error'): void {
     this.mensaje = texto;
     setTimeout(() => {
       this.mensaje = '';
     }, 5000);
   }
 
-  // Métodos auxiliares para validaciones
+  private procesarError(error: any): string {
+    console.error('Error del backend:', error);
+    
+    if (error.error) {
+      // Errores de validación de campos
+      if (error.error.fieldErrors) {
+        const errores = Object.entries(error.error.fieldErrors)
+          .map(([campo, mensaje]) => `${campo}: ${mensaje}`)
+          .join(', ');
+        return errores;
+      }
+      
+      // Mensaje directo del backend
+      if (error.error.message) {
+        return error.error.message;
+      }
+      
+      // Error general del backend
+      if (error.error.error) {
+        return error.error.error;
+      }
+    }
+    
+    // Error de conexión
+    if (error.status === 0) {
+      return 'No se pudo conectar con el servidor. Verifique su conexión.';
+    }
+    
+    return error.message || 'Ha ocurrido un error inesperado';
+  }
+
+  // ========== VALIDADORES Y HELPERS ==========
+  
+  private validarFechaNacimiento(control: any) {
+    if (!control.value) return null;
+    
+    const fechaNacimiento = new Date(control.value);
+    const fechaActual = new Date();
+    
+    fechaActual.setHours(0, 0, 0, 0);
+    fechaNacimiento.setHours(0, 0, 0, 0);
+    
+    if (fechaNacimiento >= fechaActual) {
+      return { fechaFutura: true };
+    }
+    
+    return null;
+  }
+
   obtenerErrorCampo(campo: string): string {
     const control = this.clienteForm.get(campo);
     if (control && control.errors && control.touched) {
@@ -250,6 +345,7 @@ export class ClientComponent implements OnInit {
       if (control.errors['email']) return 'Formato de email inválido';
       if (control.errors['pattern']) return `Formato de ${campo} inválido`;
       if (control.errors['maxlength']) return `${campo} excede la longitud máxima`;
+      if (control.errors['fechaFutura']) return 'La fecha de nacimiento no puede ser futura';
     }
     return '';
   }

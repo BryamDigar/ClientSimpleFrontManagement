@@ -149,29 +149,24 @@
   <div class="search-section">
     <h2>Buscar Clientes</h2>
     
-    <!-- Búsqueda por nombre o apellidos -->
     <div class="search-form">
+      <!-- Selector de tipo de búsqueda -->
+      <select [(ngModel)]="tipoBusqueda" class="search-type-select">
+        <option value="nombre">Por Nombre</option>
+        <option value="documento">Por Documento</option>
+      </select>
+      
+      <!-- Campo de búsqueda unificado -->
       <input 
         type="text" 
-        [(ngModel)]="terminoBusqueda" 
-        placeholder="Buscar por nombre o apellidos..."
-        class="search-input">
-      <button (click)="buscarClientes()" class="btn btn-primary">Buscar por Nombre</button>
-      <button (click)="cargarClientes(); terminoBusqueda = ''" class="btn btn-secondary">Mostrar Todos</button>
-    </div>
-
-    <!-- Separador -->
-    <div class="search-separator">O</div>
-
-    <!-- Búsqueda por documento -->
-    <div class="search-form">
-      <input 
-        type="text" 
-        [(ngModel)]="documentoBusqueda" 
-        placeholder="Buscar por número de documento..."
-        class="search-input">
-      <button (click)="buscarPorDocumento()" class="btn btn-primary">Buscar por Documento</button>
-      <button (click)="cargarClientes(); documentoBusqueda = ''" class="btn btn-secondary">Limpiar</button>
+        [(ngModel)]="valorBusqueda" 
+        [placeholder]="tipoBusqueda === 'nombre' ? 'Buscar por nombre o apellidos...' : 'Buscar por número de documento...'"
+        class="search-input"
+        (keyup.enter)="buscar()">
+      
+      <!-- Botones -->
+      <button (click)="buscar()" class="btn btn-primary">Buscar</button>
+      <button (click)="limpiarBusqueda()" class="btn btn-secondary">Limpiar Todo</button>
     </div>
   </div>
 
