@@ -1,0 +1,230 @@
+<div class="container">
+  <h1>Gestión de Clientes</h1>
+
+  <!-- Mensajes -->
+  <div *ngIf="mensaje" class="alert" [class.alert-success]="mensaje.includes('exitosamente') || mensaje.includes('encontraron')" 
+       [class.alert-error]="!mensaje.includes('exitosamente') && !mensaje.includes('encontraron')">
+    {{ mensaje }}
+  </div>
+
+  <!-- Formulario de Cliente -->
+  <div class="form-section">
+    <h2>{{ modoEdicion ? 'Editar Cliente' : 'Crear Nuevo Cliente' }}</h2>
+    
+    <form [formGroup]="clienteForm" (ngSubmit)="onSubmit()" class="cliente-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="numeroDocumento">Número de Documento *</label>
+          <input 
+            type="text" 
+            id="numeroDocumento"
+            formControlName="numeroDocumento"
+            [class.invalid]="campoEsInvalido('numeroDocumento')"
+            placeholder="Ingrese número de documento">
+          <div *ngIf="campoEsInvalido('numeroDocumento')" class="error-message">
+            {{ obtenerErrorCampo('numeroDocumento') }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="nombre">Nombre *</label>
+          <input 
+            type="text" 
+            id="nombre"
+            formControlName="nombre"
+            [class.invalid]="campoEsInvalido('nombre')"
+            placeholder="Ingrese nombre">
+          <div *ngIf="campoEsInvalido('nombre')" class="error-message">
+            {{ obtenerErrorCampo('nombre') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="apellidos">Apellidos *</label>
+          <input 
+            type="text" 
+            id="apellidos"
+            formControlName="apellidos"
+            [class.invalid]="campoEsInvalido('apellidos')"
+            placeholder="Ingrese apellidos">
+          <div *ngIf="campoEsInvalido('apellidos')" class="error-message">
+            {{ obtenerErrorCampo('apellidos') }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="fechaNacimiento">Fecha de Nacimiento *</label>
+          <input 
+            type="date" 
+            id="fechaNacimiento"
+            formControlName="fechaNacimiento"
+            [class.invalid]="campoEsInvalido('fechaNacimiento')">
+          <div *ngIf="campoEsInvalido('fechaNacimiento')" class="error-message">
+            {{ obtenerErrorCampo('fechaNacimiento') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ciudad">Ciudad *</label>
+          <input 
+            type="text" 
+            id="ciudad"
+            formControlName="ciudad"
+            [class.invalid]="campoEsInvalido('ciudad')"
+            placeholder="Ingrese ciudad"
+            (input)="filtrarCiudades($event)"
+            list="ciudades">
+          <datalist id="ciudades">
+            <option *ngFor="let ciudad of ciudadesFiltradas" [value]="ciudad">
+          </datalist>
+          <div *ngIf="campoEsInvalido('ciudad')" class="error-message">
+            {{ obtenerErrorCampo('ciudad') }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="correoElectronico">Correo Electrónico *</label>
+          <input 
+            type="email" 
+            id="correoElectronico"
+            formControlName="correoElectronico"
+            [class.invalid]="campoEsInvalido('correoElectronico')"
+            placeholder="ejemplo@correo.com">
+          <div *ngIf="campoEsInvalido('correoElectronico')" class="error-message">
+            {{ obtenerErrorCampo('correoElectronico') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="telefono">Teléfono *</label>
+          <input 
+            type="text" 
+            id="telefono"
+            formControlName="telefono"
+            [class.invalid]="campoEsInvalido('telefono')"
+            placeholder="Ingrese teléfono">
+          <div *ngIf="campoEsInvalido('telefono')" class="error-message">
+            {{ obtenerErrorCampo('telefono') }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="ocupacion">Ocupación *</label>
+          <select 
+            id="ocupacion"
+            formControlName="ocupacion"
+            [class.invalid]="campoEsInvalido('ocupacion')">
+            <option value="">Seleccione ocupación</option>
+            <option *ngFor="let ocupacion of ocupaciones" [value]="ocupacion">
+              {{ ocupacion }}
+            </option>
+          </select>
+          <div *ngIf="campoEsInvalido('ocupacion')" class="error-message">
+            {{ obtenerErrorCampo('ocupacion') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" [disabled]="cargando" class="btn btn-primary">
+          {{ modoEdicion ? 'Actualizar' : 'Crear' }} Cliente
+        </button>
+        <button type="button" *ngIf="modoEdicion" (click)="cancelarEdicion()" class="btn btn-secondary">
+          Cancelar
+        </button>
+        <button type="button" (click)="limpiarFormulario()" class="btn btn-secondary">
+          Limpiar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Sección de Búsqueda -->
+  <div class="search-section">
+    <h2>Buscar Clientes</h2>
+    
+    <!-- Búsqueda por nombre o apellidos -->
+    <div class="search-form">
+      <input 
+        type="text" 
+        [(ngModel)]="terminoBusqueda" 
+        placeholder="Buscar por nombre o apellidos..."
+        class="search-input">
+      <button (click)="buscarClientes()" class="btn btn-primary">Buscar por Nombre</button>
+      <button (click)="cargarClientes(); terminoBusqueda = ''" class="btn btn-secondary">Mostrar Todos</button>
+    </div>
+
+    <!-- Separador -->
+    <div class="search-separator">O</div>
+
+    <!-- Búsqueda por documento -->
+    <div class="search-form">
+      <input 
+        type="text" 
+        [(ngModel)]="documentoBusqueda" 
+        placeholder="Buscar por número de documento..."
+        class="search-input">
+      <button (click)="buscarPorDocumento()" class="btn btn-primary">Buscar por Documento</button>
+      <button (click)="cargarClientes(); documentoBusqueda = ''" class="btn btn-secondary">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Tabla de Clientes -->
+  <div class="table-section">
+    <h2>Lista de Clientes ({{ clientes.length }})</h2>
+    
+    <div *ngIf="cargando" class="loading">Cargando...</div>
+    
+    <div *ngIf="!cargando && clientes.length === 0" class="no-data">
+      No se encontraron clientes.
+    </div>
+
+    <table *ngIf="!cargando && clientes.length > 0" class="clientes-table">
+      <thead>
+        <tr>
+          <th>Documento</th>
+          <th>Nombre Completo</th>
+          <th>Fecha Nacimiento</th>
+          <th>Edad</th>
+          <th>Ciudad</th>
+          <th>Email</th>
+          <th>Teléfono</th>
+          <th>Ocupación</th>
+          <th>Viable</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let cliente of clientes">
+          <td>{{ cliente.numeroDocumento }}</td>
+          <td>{{ cliente.nombre }} {{ cliente.apellidos }}</td>
+          <td>{{ cliente.fechaNacimiento | date:'dd/MM/yyyy' }}</td>
+          <td>{{ cliente.edad || 'N/A' }} años</td>
+          <td>{{ cliente.ciudad }}</td>
+          <td>{{ cliente.correoElectronico }}</td>
+          <td>{{ cliente.telefono }}</td>
+          <td>{{ cliente.ocupacion }}</td>
+          <td>
+            <span [class]="cliente.esViable ? 'badge viable' : 'badge no-viable'">
+              {{ cliente.esViable ? 'Sí' : 'No' }}
+            </span>
+          </td>
+          <td class="actions">
+            <button (click)="editarCliente(cliente)" class="btn btn-sm btn-edit">
+              Editar
+            </button>
+            <button (click)="eliminarCliente(cliente.numeroDocumento)" class="btn btn-sm btn-delete">
+              Eliminar
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
